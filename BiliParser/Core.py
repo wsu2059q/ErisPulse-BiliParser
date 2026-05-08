@@ -572,47 +572,63 @@ class Main(BaseModule):
             resolved_ids = await self._resolve_all_ids(ids)
             max_count = self.config.get("max_videos_per_message", 3)
 
-            for vid in resolved_ids[:max_count]:
-                await self._send_video_info(event, vid)
+            if self.config.get("enable_download", True) and self._is_watch_intent(text):
+                for vid in resolved_ids[:max_count]:
+                    await self._send_video_file(event, vid)
+            else:
+                for vid in resolved_ids[:max_count]:
+                    await self._send_video_info(event, vid)
 
-    async def _handle_download_reply(self, reply_event, video_id: str):
-        text = reply_event.get_text().strip()
-        if "我要看" not in text and "看这个" not in text:
-            return
+    _WATCH_KEYWORDS = frozenset({
+        "看看", "想看", "我要看", "我想看", "看这个", "看看这个",
+        "看视频", "播放", "下载", "发视频", "发来",
+        "watch", "play", "download", "video",
+    })
 
-        user_key = f"{reply_event.get_platform()}:{reply_event.get_user_id()}"
+    def _is_watch_intent(self, text: str) -> bool:
+        text_lower = text.lower()
+        return any(kw in text_lower for kw in self._WATCH_KEYWORDS)
+
+    async def _send_video_file(self, event, video_id: str):
+        user_key = f"{event.get_platform()}:{event.get_user_id()}"
         cooldown = self.config.get("download_cooldown", 60)
         now = time.time()
-        last = getattr(self, "_download_cooldowns", {}).get(user_key, 0)
-        if now - last < cooldown:
-            remaining = int(cooldown - (now - last))
-            await reply_event.reply(f"操作太频繁，请 {remaining} 秒后再试")
-            return
         if not hasattr(self, "_download_cooldowns"):
             self._download_cooldowns = {}
+        last = self._download_cooldowns.get(user_key, 0)
+        if now - last < cooldown:
+            remaining = int(cooldown - (now - last))
+            await event.reply(f"操作太频繁，请 {remaining} 秒后再试")
+            return
         self._download_cooldowns[user_key] = now
 
-        await reply_event.reply("正在发送视频，请稍候...")
+        await event.reply("正在下载视频，请稍候...")
 
         downloader = BiliVideoDownloader(self.logger, self.config)
         file_path = await downloader.download_video(video_id)
 
         if file_path:
             try:
-                await reply_event.reply(file_path, method="Video")
+                await event.reply(file_path, method="Video")
             except Exception:
                 try:
-                    await reply_event.reply(file_path, method="File")
+                    await event.reply(file_path, method="File")
                 except Exception as e:
                     self.logger.error(f"发送视频文件失败: {e}")
-                    await reply_event.reply("视频发送失败，平台可能不支持发送视频文件")
+                    await event.reply("视频发送失败，平台可能不支持发送视频文件")
             finally:
                 try:
                     os.unlink(file_path)
                 except Exception:
                     pass
         else:
-            await reply_event.reply("视频下载失败，请稍后重试")
+            await event.reply("视频下载失败，请稍后重试")
+
+    async def _handle_download_reply(self, reply_event, video_id: str):
+        text = reply_event.get_text().strip()
+        if "我要看" not in text and "看这个" not in text:
+            return
+        await self._send_video_file(reply_event, video_id)
 
     async def _resolve_all_ids(self, ids: list) -> List[str]:
         resolved = []

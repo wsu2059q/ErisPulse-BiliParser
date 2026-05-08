@@ -10,6 +10,7 @@ B站视频解析模块，自动解析消息中的B站视频链接并展示详细
 - 热门评论展示
 - 多平台富文本适配（HTML > Markdown > 纯文本自动回退）
 - 解析结果缓存
+- 引用回复下载视频：引用机器人发送的视频信息消息并说"我想看"等关键词，自动下载并发送视频文件
 
 ## 安装
 
@@ -31,6 +32,9 @@ show_description = false    # 显示视频简介
 max_desc_length = 100       # 简介最大长度
 cache_ttl = 600             # 缓存过期时间（秒）
 max_videos_per_message = 3  # 单条消息最多解析视频数
+enable_download = true      # 启用回复下载视频功能
+download_cooldown = 60      # 下载冷却时间（秒）
+max_file_size = 104857600   # 最大文件大小（字节，默认100MB）
 ```
 
 ## 使用
@@ -49,7 +53,21 @@ max_videos_per_message = 3  # 单条消息最多解析视频数
 /bili BV1xx411c7mD
 /bili av2
 /bili https://b23.tv/xxxxx
+/bili b23.tv/xxxxx
 ```
+
+### 回复下载视频
+
+当机器人发送视频信息后，引用/回复该消息并包含"看"相关关键词即可触发视频下载：
+
+```
+我想看这个视频
+看看
+播放
+下载视频
+```
+
+> 需要平台支持 Video 或 File 发送方法。5分钟内有效，超时需重新解析。
 
 ## 支持的链接格式
 
@@ -59,3 +77,4 @@ max_videos_per_message = 3  # 单条消息最多解析视频数
 | AV号 | `av2` |
 | 完整链接 | `https://www.bilibili.com/video/BV1xx411c7mD` |
 | 短链接 | `https://b23.tv/xxxxx` |
+| 无协议短链接 | `b23.tv/xxxxx` |

@@ -1,5 +1,7 @@
+import os
 import re
 import time
+import tempfile
 from typing import Optional, Dict, List, Tuple
 
 import aiohttp
@@ -12,7 +14,7 @@ from ErisPulse.Core.Event import command, message
 
 _BILI_LINK_REGEX = re.compile(
     r'(?:https?://(?:www\.)?bilibili\.com/video/((?:BV[\w]+)|(?:av\d+))'
-    r'|https?://b23\.tv/([\w]+)'
+    r'|(?:https?://)?b23\.tv/([\w]+)'
     r'|(?<!\w)((?:BV[\w]{6,12})|(?:av\d+))(?!\w))',
     re.IGNORECASE
 )
@@ -259,17 +261,19 @@ class BiliVideoParser:
         url = f"https://b23.tv/{short_code}"
         try:
             async with aiohttp.ClientSession(
-                allow_redirects=False,
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as session:
-                async with session.get(url) as resp:
+                async with session.get(url, allow_redirects=False) as resp:
                     if resp.status in (301, 302):
                         redirect_url = resp.headers.get("Location", "")
                         match = re.search(
-                            r'(?:BV[\w]+|av\d+)', redirect_url
+                            r'(?:BV[\w]+|av\d+)', redirect_url, re.IGNORECASE
                         )
                         if match:
-                            return match.group(0)
+                            result = match.group(0)
+                            if result[:2].lower() == "bv":
+                                result = "BV" + result[2:]
+                            return result
             return None
         except Exception as e:
             self.logger.warning(f"解析短链接失败: {url} - {e}")
@@ -402,6 +406,90 @@ class BiliVideoParser:
             return []
 
 
+class BiliVideoDownloader:
+    _HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://www.bilibili.com",
+    }
+
+    def __init__(self, logger, config: dict):
+        self.logger = logger
+        self.config = config
+
+    async def download_video(self, video_id: str, page_index: int = 0) -> Optional[str]:
+        try:
+            if video_id[:2].upper() == "BV":
+                v = video.Video(bvid=video_id)
+            elif video_id.startswith("av"):
+                v = video.Video(aid=int(video_id[2:]))
+            else:
+                return None
+
+            download_url_data = await v.get_download_url(page_index=page_index, html5=True)
+            detector = video.VideoDownloadURLDataDetecter(download_url_data)
+            streams = detector.detect_all()
+
+            download_url = None
+            for stream in streams:
+                if isinstance(stream, video.MP4StreamDownloadURL):
+                    download_url = stream.url
+                    break
+
+            if not download_url:
+                for stream in streams:
+                    if isinstance(stream, video.FLVStreamDownloadURL):
+                        download_url = stream.url
+                        break
+
+            if not download_url:
+                if streams:
+                    first = streams[0]
+                    download_url = first.url if hasattr(first, "url") else None
+
+            if not download_url:
+                self.logger.error(f"未找到可用的视频流: {video_id}")
+                return None
+
+            max_file_size = self.config.get("max_file_size", 104857600)
+
+            fd, temp_path = tempfile.mkstemp(suffix=".mp4", prefix="bili_")
+            os.close(fd)
+
+            try:
+                async with aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=300),
+                    headers=self._HEADERS,
+                ) as session:
+                    async with session.get(download_url) as resp:
+                        if resp.status != 200:
+                            self.logger.error(f"下载视频流失败: HTTP {resp.status}")
+                            os.unlink(temp_path)
+                            return None
+
+                        total_size = 0
+                        with open(temp_path, "wb") as f:
+                            async for chunk in resp.content.iter_chunked(8192):
+                                total_size += len(chunk)
+                                if total_size > max_file_size:
+                                    self.logger.warning(f"视频文件超过大小限制: {total_size} > {max_file_size}")
+                                    f.close()
+                                    os.unlink(temp_path)
+                                    return None
+                                f.write(chunk)
+
+                self.logger.info(f"视频下载完成: {video_id} ({total_size} bytes)")
+                return temp_path
+
+            except Exception:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                raise
+
+        except Exception as e:
+            self.logger.error(f"下载视频 {video_id} 失败: {e}")
+            return None
+
+
 class Main(BaseModule):
     def __init__(self):
         self.sdk = sdk
@@ -429,6 +517,9 @@ class Main(BaseModule):
                 "max_desc_length": 100,
                 "cache_ttl": 600,
                 "max_videos_per_message": 3,
+                "enable_download": True,
+                "download_cooldown": 60,
+                "max_file_size": 104857600,
             }
             sdk.config.setConfig("BiliParser", default_config, immediate=True)
             self.logger.info("已创建默认配置")
@@ -483,6 +574,45 @@ class Main(BaseModule):
 
             for vid in resolved_ids[:max_count]:
                 await self._send_video_info(event, vid)
+
+    async def _handle_download_reply(self, reply_event, video_id: str):
+        text = reply_event.get_text().strip()
+        if "我要看" not in text and "看这个" not in text:
+            return
+
+        user_key = f"{reply_event.get_platform()}:{reply_event.get_user_id()}"
+        cooldown = self.config.get("download_cooldown", 60)
+        now = time.time()
+        last = getattr(self, "_download_cooldowns", {}).get(user_key, 0)
+        if now - last < cooldown:
+            remaining = int(cooldown - (now - last))
+            await reply_event.reply(f"操作太频繁，请 {remaining} 秒后再试")
+            return
+        if not hasattr(self, "_download_cooldowns"):
+            self._download_cooldowns = {}
+        self._download_cooldowns[user_key] = now
+
+        await reply_event.reply("正在发送视频，请稍候...")
+
+        downloader = BiliVideoDownloader(self.logger, self.config)
+        file_path = await downloader.download_video(video_id)
+
+        if file_path:
+            try:
+                await reply_event.reply(file_path, method="Video")
+            except Exception:
+                try:
+                    await reply_event.reply(file_path, method="File")
+                except Exception as e:
+                    self.logger.error(f"发送视频文件失败: {e}")
+                    await reply_event.reply("视频发送失败，平台可能不支持发送视频文件")
+            finally:
+                try:
+                    os.unlink(file_path)
+                except Exception:
+                    pass
+        else:
+            await reply_event.reply("视频下载失败，请稍后重试")
 
     async def _resolve_all_ids(self, ids: list) -> List[str]:
         resolved = []
@@ -543,7 +673,20 @@ class Main(BaseModule):
         platform = event.get_platform()
         fmt_name, content = self._select_best_format(platform, templates_set)
 
+        if self.config.get("enable_download", True):
+            download_hint = "\n\n想看这个视频吗？回复：`我要看这个`"
+            content += download_hint
+
         try:
             await event.reply(content, method=fmt_name)
         except Exception:
             await event.reply(templates_set["text"])
+
+        if self.config.get("enable_download", True):
+            async def on_download_reply(reply_event):
+                await self._handle_download_reply(reply_event, video_id)
+
+            await event.wait_reply(
+                timeout=60,
+                callback=on_download_reply,
+            )

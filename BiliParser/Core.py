@@ -107,6 +107,8 @@ class BiliTemplates:
                 f'</div>'
             )
 
+        cover_section = ""
+
         link_line = ""
         if bvid:
             link_line = (
@@ -117,6 +119,7 @@ class BiliTemplates:
 
         return (
             f'<div style="padding: 12px; border-radius: 8px;">'
+            f'{cover_section}'
             f'<div style="color: {cls.PRIMARY_COLOR}; font-size: 15px; font-weight: bold; margin-bottom: 8px;">{info["title"]}</div>'
             f'<div style="font-size: 13px; margin-bottom: 10px;">UP主: <span style="color: {cls.PRIMARY_COLOR}; font-weight: bold;">{owner.get("name", "未知")}</span></div>'
             f'<div style="padding: 8px; background: {cls.PRIMARY_BG}; border-radius: 6px; margin-bottom: 8px;">'
@@ -218,6 +221,7 @@ class BiliTemplates:
             content = c["content"]
             if len(content) > 80:
                 content = content[:80] + "..."
+            content = content.replace('\n', '<br>')
             like_text = f' <span style="color: {cls.SECONDARY_COLOR};">({_format_count(c["like"])})</span>' if c["like"] > 0 else ""
             items.append(
                 f'<div style="margin-bottom: 4px; font-size: 12px;">'
@@ -234,6 +238,7 @@ class BiliTemplates:
             content = c["content"]
             if len(content) > 80:
                 content = content[:80] + "..."
+            content = content.replace('\n', ' ')
             like_text = f' ({_format_count(c["like"])})' if c["like"] > 0 else ""
             lines.append(f'{i}. **{c["user"]}**: {content}{like_text}')
         return '\n'.join(lines)
@@ -245,6 +250,7 @@ class BiliTemplates:
             content = c["content"]
             if len(content) > 80:
                 content = content[:80] + "..."
+            content = content.replace('\n', ' ')
             like_text = f' ({_format_count(c["like"])})' if c["like"] > 0 else ""
             lines.append(f'{i}. {c["user"]}: {content}{like_text}')
         return '\n'.join(lines)
@@ -452,6 +458,20 @@ class BiliVideoDownloader:
 
             max_file_size = self.config.get("max_file_size", 104857600)
 
+            try:
+                async with aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=10),
+                    headers=self._HEADERS,
+                ) as session:
+                    async with session.head(download_url) as resp:
+                        if resp.status == 200:
+                            content_length = int(resp.headers.get("Content-Length", 0))
+                            if content_length > max_file_size:
+                                self.logger.warning(f"视频文件过大: {content_length} > {max_file_size}")
+                                return "TOO_LARGE"
+            except Exception:
+                pass
+
             fd, temp_path = tempfile.mkstemp(suffix=".mp4", prefix="bili_")
             os.close(fd)
 
@@ -520,6 +540,7 @@ class Main(BaseModule):
                 "enable_download": True,
                 "download_cooldown": 60,
                 "max_file_size": 104857600,
+                "download_retries": 3,
             }
             sdk.config.setConfig("BiliParser", default_config, immediate=True)
             self.logger.info("已创建默认配置")
@@ -586,7 +607,8 @@ class Main(BaseModule):
     })
 
     def _is_watch_intent(self, text: str) -> bool:
-        text_lower = text.lower()
+        cleaned = _BILI_LINK_REGEX.sub('', text)
+        text_lower = cleaned.lower()
         return any(kw in text_lower for kw in self._WATCH_KEYWORDS)
 
     async def _send_video_file(self, event, video_id: str):
@@ -604,25 +626,46 @@ class Main(BaseModule):
 
         await event.reply("正在下载视频，请稍候...")
 
-        downloader = BiliVideoDownloader(self.logger, self.config)
-        file_path = await downloader.download_video(video_id)
+        max_retries = self.config.get("download_retries", 3)
 
-        if file_path:
+        for attempt in range(max_retries):
+            if attempt > 0:
+                self.logger.info(f"下载重试 ({attempt + 1}/{max_retries}): {video_id}")
+
+            downloader = BiliVideoDownloader(self.logger, self.config)
+            result = await downloader.download_video(video_id)
+
+            if result == "TOO_LARGE":
+                size_mb = self.config.get("max_file_size", 104857600) / 1024 / 1024
+                await event.reply(f"该视频文件过大（超过 {size_mb:.0f}MB），无法下载发送")
+                return
+
+            if not result:
+                if attempt < max_retries - 1:
+                    continue
+                await event.reply("视频下载失败，请稍后重试")
+                return
+
+            sent = False
             try:
-                await event.reply(file_path, method="Video")
+                await event.reply(result, method="Video")
+                sent = True
             except Exception:
                 try:
-                    await event.reply(file_path, method="File")
+                    await event.reply(result, method="File")
+                    sent = True
                 except Exception as e:
-                    self.logger.error(f"发送视频文件失败: {e}")
-                    await event.reply("视频发送失败，平台可能不支持发送视频文件")
+                    self.logger.error(f"发送视频文件失败 (尝试 {attempt + 1}/{max_retries}): {e}")
             finally:
                 try:
-                    os.unlink(file_path)
+                    os.unlink(result)
                 except Exception:
                     pass
-        else:
-            await event.reply("视频下载失败，请稍后重试")
+
+            if sent:
+                return
+
+        await event.reply("视频下载失败，请稍后重试")
 
     async def _handle_download_reply(self, reply_event, video_id: str):
         text = reply_event.get_text().strip()
@@ -658,15 +701,6 @@ class Main(BaseModule):
         if not info:
             return
 
-        cover_url = info.get("cover", "")
-        show_cover = self.config.get("show_cover", True)
-
-        if show_cover and cover_url:
-            try:
-                await event.reply(cover_url, method="Image")
-            except Exception as e:
-                self.logger.debug(f"发送封面图失败: {e}")
-
         comments = []
         show_comments = self.config.get("show_comments", True)
         comment_count = self.config.get("comment_count", 3)
@@ -688,6 +722,12 @@ class Main(BaseModule):
 
         platform = event.get_platform()
         fmt_name, content = self._select_best_format(platform, templates_set)
+
+        if self.config.get("show_cover", True) and info.get("cover"):
+            try:
+                await event.reply(info["cover"], method="Image")
+            except Exception as e:
+                self.logger.debug(f"发送封面图失败: {e}")
 
         if self.config.get("enable_download", True):
             download_hint = "\n\n想看这个视频吗？回复：`我要看这个`"

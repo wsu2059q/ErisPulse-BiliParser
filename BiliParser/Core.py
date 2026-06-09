@@ -13,10 +13,10 @@ from ErisPulse.Core.Event import command, message
 
 
 _BILI_LINK_REGEX = re.compile(
-    r'(?:https?://(?:www\.)?bilibili\.com/video/((?:BV[\w]+)|(?:av\d+))'
-    r'|(?:https?://)?b23\.tv/([\w]+)'
-    r'|(?<!\w)((?:BV[\w]{6,12})|(?:av\d+))(?!\w))',
-    re.IGNORECASE
+    r"(?:https?://(?:www\.)?bilibili\.com/video/((?:BV[\w]+)|(?:av\d+))"
+    r"|(?:https?://)?b23\.tv/([\w]+)"
+    r"|(?<!\w)((?:BV[\w]{6,12})|(?:av\d+))(?!\w))",
+    re.IGNORECASE,
 )
 
 
@@ -60,13 +60,13 @@ class BiliTemplates:
         stat_items = (
             f'<span style="margin-right: 12px;">播放 {_format_count(stat.get("view", 0))}</span>'
             f'<span style="margin-right: 12px;">弹幕 {_format_count(stat.get("danmaku", 0))}</span>'
-            f'<span>点赞 {_format_count(stat.get("like", 0))}</span>'
+            f"<span>点赞 {_format_count(stat.get('like', 0))}</span>"
         )
 
         interact_items = (
             f'<span style="margin-right: 12px;">投币 {_format_count(stat.get("coin", 0))}</span>'
             f'<span style="margin-right: 12px;">收藏 {_format_count(stat.get("favorite", 0))}</span>'
-            f'<span>分享 {_format_count(stat.get("share", 0))}</span>'
+            f"<span>分享 {_format_count(stat.get('share', 0))}</span>"
         )
 
         duration_line = ""
@@ -83,7 +83,9 @@ class BiliTemplates:
                 f'<code style="font-size: 11px; background: rgba(0,0,0,0.04); padding: 1px 5px; border-radius: 3px;">{t}</code>'
                 for t in info["tags"]
             )
-            tags_line = f'<div style="font-size: 12px; margin-top: 6px;">{tags_html}</div>'
+            tags_line = (
+                f'<div style="font-size: 12px; margin-top: 6px;">{tags_html}</div>'
+            )
 
         desc_section = ""
         if config.get("show_description", False) and info.get("description"):
@@ -95,7 +97,7 @@ class BiliTemplates:
                 f'<details style="margin-top: 8px;">'
                 f'<summary style="cursor: pointer; font-size: 12px; color: {cls.SECONDARY_COLOR};">简介</summary>'
                 f'<div style="padding: 6px; font-size: 12px; color: {cls.SECONDARY_COLOR};">{desc}</div>'
-                f'</details>'
+                f"</details>"
             )
 
         comments_section = ""
@@ -103,8 +105,8 @@ class BiliTemplates:
             comments_section = (
                 f'<div style="margin-top: 8px; border-top: 1px solid rgba(0,0,0,0.06); padding-top: 8px;">'
                 f'<div style="font-size: 13px; font-weight: bold; color: {cls.PRIMARY_COLOR}; margin-bottom: 6px;">热门评论</div>'
-                f'{comments_text}'
-                f'</div>'
+                f"{comments_text}"
+                f"</div>"
             )
 
         cover_section = ""
@@ -114,24 +116,24 @@ class BiliTemplates:
             link_line = (
                 f'<div style="margin-top: 8px;">'
                 f'<a href="https://www.bilibili.com/video/{bvid}" style="font-size: 12px; color: {cls.PRIMARY_COLOR};">https://www.bilibili.com/video/{bvid}</a>'
-                f'</div>'
+                f"</div>"
             )
 
         return (
             f'<div style="padding: 12px; border-radius: 8px;">'
-            f'{cover_section}'
+            f"{cover_section}"
             f'<div style="color: {cls.PRIMARY_COLOR}; font-size: 15px; font-weight: bold; margin-bottom: 8px;">{info["title"]}</div>'
             f'<div style="font-size: 13px; margin-bottom: 10px;">UP主: <span style="color: {cls.PRIMARY_COLOR}; font-weight: bold;">{owner.get("name", "未知")}</span></div>'
             f'<div style="padding: 8px; background: {cls.PRIMARY_BG}; border-radius: 6px; margin-bottom: 8px;">'
             f'<div style="font-size: 13px; margin-bottom: 4px;">{stat_items}</div>'
             f'<div style="font-size: 13px;">{interact_items}</div>'
-            f'{duration_line}{pages_line}'
-            f'{tags_line}'
-            f'</div>'
-            f'{desc_section}'
-            f'{comments_section}'
-            f'{link_line}'
-            f'</div>'
+            f"{duration_line}{pages_line}"
+            f"{tags_line}"
+            f"</div>"
+            f"{desc_section}"
+            f"{comments_section}"
+            f"{link_line}"
+            f"</div>"
         )
 
     @classmethod
@@ -141,38 +143,38 @@ class BiliTemplates:
         bvid = info.get("bvid", "")
 
         lines = [
-            f'**{info["title"]}**',
-            f'UP主: {owner.get("name", "未知")}',
-            '',
-            f'播放: {_format_count(stat.get("view", 0))} | '
-            f'弹幕: {_format_count(stat.get("danmaku", 0))} | '
-            f'点赞: {_format_count(stat.get("like", 0))}',
-            f'投币: {_format_count(stat.get("coin", 0))} | '
-            f'收藏: {_format_count(stat.get("favorite", 0))} | '
-            f'分享: {_format_count(stat.get("share", 0))}',
+            f"**{info['title']}**",
+            f"UP主: {owner.get('name', '未知')}",
+            "",
+            f"播放: {_format_count(stat.get('view', 0))} | "
+            f"弹幕: {_format_count(stat.get('danmaku', 0))} | "
+            f"点赞: {_format_count(stat.get('like', 0))}",
+            f"投币: {_format_count(stat.get('coin', 0))} | "
+            f"收藏: {_format_count(stat.get('favorite', 0))} | "
+            f"分享: {_format_count(stat.get('share', 0))}",
         ]
 
         if info.get("duration") and info["duration"] != "0:00":
-            lines.append(f'时长: {info["duration"]}')
+            lines.append(f"时长: {info['duration']}")
         if info.get("videos", 1) > 1:
-            lines.append(f'共 {info["videos"]} P')
+            lines.append(f"共 {info['videos']} P")
         if info.get("tags"):
-            lines.append(f'标签: {" | ".join(info["tags"])}')
+            lines.append(f"标签: {' | '.join(info['tags'])}")
 
         if config.get("show_description", False) and info.get("description"):
             max_len = config.get("max_desc_length", 100)
             desc = info["description"][:max_len]
             if len(info["description"]) > max_len:
                 desc += "..."
-            lines.extend(['', f'> {desc}'])
+            lines.extend(["", f"> {desc}"])
 
         if comments_text:
-            lines.extend(['', '**热门评论**', comments_text])
+            lines.extend(["", "**热门评论**", comments_text])
 
         if bvid:
-            lines.extend(['', f'[查看原视频](https://www.bilibili.com/video/{bvid})'])
+            lines.extend(["", f"[查看原视频](https://www.bilibili.com/video/{bvid})"])
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     @classmethod
     def _build_text(cls, info: dict, config: dict, comments_text: str) -> str:
@@ -182,37 +184,37 @@ class BiliTemplates:
 
         lines = [
             info["title"],
-            f'UP主: {owner.get("name", "未知")}',
-            '----------',
-            f'播放: {_format_count(stat.get("view", 0))}  '
-            f'弹幕: {_format_count(stat.get("danmaku", 0))}  '
-            f'点赞: {_format_count(stat.get("like", 0))}',
-            f'投币: {_format_count(stat.get("coin", 0))}  '
-            f'收藏: {_format_count(stat.get("favorite", 0))}  '
-            f'分享: {_format_count(stat.get("share", 0))}',
+            f"UP主: {owner.get('name', '未知')}",
+            "----------",
+            f"播放: {_format_count(stat.get('view', 0))}  "
+            f"弹幕: {_format_count(stat.get('danmaku', 0))}  "
+            f"点赞: {_format_count(stat.get('like', 0))}",
+            f"投币: {_format_count(stat.get('coin', 0))}  "
+            f"收藏: {_format_count(stat.get('favorite', 0))}  "
+            f"分享: {_format_count(stat.get('share', 0))}",
         ]
 
         if info.get("duration") and info["duration"] != "0:00":
-            lines.append(f'时长: {info["duration"]}')
+            lines.append(f"时长: {info['duration']}")
         if info.get("videos", 1) > 1:
-            lines.append(f'共 {info["videos"]} P')
+            lines.append(f"共 {info['videos']} P")
         if info.get("tags"):
-            lines.append(f'标签: {" | ".join(info["tags"])}')
+            lines.append(f"标签: {' | '.join(info['tags'])}")
 
         if config.get("show_description", False) and info.get("description"):
             max_len = config.get("max_desc_length", 100)
             desc = info["description"][:max_len]
             if len(info["description"]) > max_len:
                 desc += "..."
-            lines.extend(['', desc])
+            lines.extend(["", desc])
 
         if comments_text:
-            lines.extend(['', '── 热门评论 ──', comments_text])
+            lines.extend(["", "── 热门评论 ──", comments_text])
 
         if bvid:
-            lines.extend(['', f'https://www.bilibili.com/video/{bvid}'])
+            lines.extend(["", f"https://www.bilibili.com/video/{bvid}"])
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     @classmethod
     def build_comments_html(cls, comments: list) -> str:
@@ -221,15 +223,19 @@ class BiliTemplates:
             content = c["content"]
             if len(content) > 80:
                 content = content[:80] + "..."
-            content = content.replace('\n', '<br>')
-            like_text = f' <span style="color: {cls.SECONDARY_COLOR};">({_format_count(c["like"])})</span>' if c["like"] > 0 else ""
+            content = content.replace("\n", "<br>")
+            like_text = (
+                f' <span style="color: {cls.SECONDARY_COLOR};">({_format_count(c["like"])})</span>'
+                if c["like"] > 0
+                else ""
+            )
             items.append(
                 f'<div style="margin-bottom: 4px; font-size: 12px;">'
                 f'<span style="font-weight: bold;">{i}. {c["user"]}</span>: '
-                f'{content}{like_text}'
-                f'</div>'
+                f"{content}{like_text}"
+                f"</div>"
             )
-        return ''.join(items)
+        return "".join(items)
 
     @classmethod
     def build_comments_markdown(cls, comments: list) -> str:
@@ -238,10 +244,10 @@ class BiliTemplates:
             content = c["content"]
             if len(content) > 80:
                 content = content[:80] + "..."
-            content = content.replace('\n', ' ')
-            like_text = f' ({_format_count(c["like"])})' if c["like"] > 0 else ""
-            lines.append(f'{i}. **{c["user"]}**: {content}{like_text}')
-        return '\n'.join(lines)
+            content = content.replace("\n", " ")
+            like_text = f" ({_format_count(c['like'])})" if c["like"] > 0 else ""
+            lines.append(f"{i}. **{c['user']}**: {content}{like_text}")
+        return "\n".join(lines)
 
     @classmethod
     def build_comments_text(cls, comments: list) -> str:
@@ -250,10 +256,10 @@ class BiliTemplates:
             content = c["content"]
             if len(content) > 80:
                 content = content[:80] + "..."
-            content = content.replace('\n', ' ')
-            like_text = f' ({_format_count(c["like"])})' if c["like"] > 0 else ""
-            lines.append(f'{i}. {c["user"]}: {content}{like_text}')
-        return '\n'.join(lines)
+            content = content.replace("\n", " ")
+            like_text = f" ({_format_count(c['like'])})" if c["like"] > 0 else ""
+            lines.append(f"{i}. {c['user']}: {content}{like_text}")
+        return "\n".join(lines)
 
 
 class BiliVideoParser:
@@ -273,7 +279,7 @@ class BiliVideoParser:
                     if resp.status in (301, 302):
                         redirect_url = resp.headers.get("Location", "")
                         match = re.search(
-                            r'(?:BV[\w]+|av\d+)', redirect_url, re.IGNORECASE
+                            r"(?:BV[\w]+|av\d+)", redirect_url, re.IGNORECASE
                         )
                         if match:
                             result = match.group(0)
@@ -315,7 +321,9 @@ class BiliVideoParser:
     def _set_cache(self, key: str, data: dict):
         self._cache[key] = (data, time.time())
         now = time.time()
-        expired = [k for k, (_, ts) in self._cache.items() if now - ts > self._cache_ttl]
+        expired = [
+            k for k, (_, ts) in self._cache.items() if now - ts > self._cache_ttl
+        ]
         for k in expired:
             del self._cache[k]
 
@@ -377,9 +385,7 @@ class BiliVideoParser:
             self.logger.error(f"解析视频 {video_id} 失败: {e}")
             return None
 
-    async def get_hot_comments(
-        self, aid: int, count: int = 3
-    ) -> List[dict]:
+    async def get_hot_comments(self, aid: int, count: int = 3) -> List[dict]:
         cache_key = f"comments_{aid}"
         cached = self._get_cache(cache_key)
         if cached:
@@ -396,11 +402,13 @@ class BiliVideoParser:
             for c in comments_data.get("replies", []) or []:
                 member = c.get("member", {})
                 content = c.get("content", {})
-                comments.append({
-                    "user": member.get("uname", "匿名"),
-                    "content": content.get("message", ""),
-                    "like": c.get("like", 0),
-                })
+                comments.append(
+                    {
+                        "user": member.get("uname", "匿名"),
+                        "content": content.get("message", ""),
+                        "like": c.get("like", 0),
+                    }
+                )
                 if len(comments) >= 10:
                     break
 
@@ -431,7 +439,9 @@ class BiliVideoDownloader:
             else:
                 return None
 
-            download_url_data = await v.get_download_url(page_index=page_index, html5=True)
+            download_url_data = await v.get_download_url(
+                page_index=page_index, html5=True
+            )
             detector = video.VideoDownloadURLDataDetecter(download_url_data)
             streams = detector.detect_all()
 
@@ -467,7 +477,9 @@ class BiliVideoDownloader:
                         if resp.status == 200:
                             content_length = int(resp.headers.get("Content-Length", 0))
                             if content_length > max_file_size:
-                                self.logger.warning(f"视频文件过大: {content_length} > {max_file_size}")
+                                self.logger.warning(
+                                    f"视频文件过大: {content_length} > {max_file_size}"
+                                )
                                 return "TOO_LARGE"
             except Exception:
                 pass
@@ -491,7 +503,9 @@ class BiliVideoDownloader:
                             async for chunk in resp.content.iter_chunked(8192):
                                 total_size += len(chunk)
                                 if total_size > max_file_size:
-                                    self.logger.warning(f"视频文件超过大小限制: {total_size} > {max_file_size}")
+                                    self.logger.warning(
+                                        f"视频文件超过大小限制: {total_size} > {max_file_size}"
+                                    )
                                     f.close()
                                     os.unlink(temp_path)
                                     return None
@@ -520,6 +534,7 @@ class Main(BaseModule):
     @staticmethod
     def get_load_strategy():
         from ErisPulse.loaders import ModuleLoadStrategy
+
         return ModuleLoadStrategy(
             lazy_load=False,
             priority=0,
@@ -549,6 +564,7 @@ class Main(BaseModule):
 
     async def on_load(self, event):
         self._register_commands()
+        self._register_settings_command()
 
         if self.config.get("auto_parse", True):
             self._register_auto_parse()
@@ -561,6 +577,7 @@ class Main(BaseModule):
     def _register_commands(self):
         @command("bili", help="解析B站视频链接")
         async def bili_cmd(event):
+            event.mark_processed()
             args = event.get_command_args()
             if not args:
                 await event.reply("用法: /bili <BV号/AV号/链接>")
@@ -576,6 +593,62 @@ class Main(BaseModule):
 
             await self._send_video_info(event, resolved_ids[0])
 
+    _SEND_MODE_MAP = {
+        "only_info": "只发详情",
+        "only_video": "只发视频",
+        "both": "都发送",
+    }
+
+    def _register_settings_command(self):
+        @command("bili_set", help="Bili解析姬设置")
+        async def bili_set_cmd(event):
+            conv = event.conversation(timeout=60)
+            chat_key = self._chat_key(event)
+
+            while True:
+                settings = self._get_chat_settings(chat_key)
+                auto_dl = settings.get("auto_download", False)
+                send_mode = settings.get("send_mode", "only_info")
+                dl_status = "开启" if auto_dl else "关闭"
+                mode_label = self._SEND_MODE_MAP.get(send_mode, send_mode)
+
+                choice = await conv.choose(
+                    "Bili解析姬设置",
+                    ["返回", f"自动下载: {dl_status}", f"发送模式: {mode_label}"],
+                )
+
+                if choice is None or choice == 0:
+                    return
+
+                if choice == 1:
+                    new_val = not auto_dl
+                    settings["auto_download"] = new_val
+                    self.sdk.storage.set(f"biliparser_settings:{chat_key}", settings)
+                    new_status = "开启" if new_val else "关闭"
+                    await conv.say(f"自动下载已切换为: {new_status}")
+
+                elif choice == 2:
+                    mode_choice = await conv.choose(
+                        "选择发送模式\n自动下载关闭时: 始终只发详情\n自动下载开启时生效",
+                        ["只发详情", "只发视频", "都发送"],
+                    )
+                    if mode_choice is None:
+                        continue
+                    mode_keys = ["only_info", "only_video", "both"]
+                    new_mode = mode_keys[mode_choice]
+                    settings["send_mode"] = new_mode
+                    self.sdk.storage.set(f"biliparser_settings:{chat_key}", settings)
+                    await conv.say(f"发送模式已设置为: {self._SEND_MODE_MAP[new_mode]}")
+
+    def _chat_key(self, event) -> str:
+        platform = event.get_platform()
+        if event.is_private_message():
+            return f"{platform}:user:{event.get_user_id()}"
+        return f"{platform}:group:{event.get_group_id()}"
+
+    def _get_chat_settings(self, chat_key: str) -> dict:
+        return self.sdk.storage.get(f"biliparser_settings:{chat_key}", {})
+
     def _register_auto_parse(self):
         @message.on_message(priority=50)
         async def auto_parse_handler(event):
@@ -590,24 +663,49 @@ class Main(BaseModule):
             if not ids:
                 return
 
+            chat_key = self._chat_key(event)
+            chat_settings = self._get_chat_settings(chat_key)
+            auto_download = chat_settings.get("auto_download", False)
+            send_mode = chat_settings.get("send_mode", "only_info")
+
             resolved_ids = await self._resolve_all_ids(ids)
             max_count = self.config.get("max_videos_per_message", 3)
 
-            if self.config.get("enable_download", True) and self._is_watch_intent(text):
-                for vid in resolved_ids[:max_count]:
-                    await self._send_video_file(event, vid)
-            else:
-                for vid in resolved_ids[:max_count]:
+            for vid in resolved_ids[:max_count]:
+                if auto_download:
+                    if send_mode == "only_video":
+                        await self._send_video_file(event, vid)
+                    elif send_mode == "both":
+                        await self._send_video_info(event, vid, skip_download_hint=True)
+                        await self._send_video_file(event, vid)
+                    else:
+                        await self._send_video_info(event, vid, skip_download_hint=True)
+                        await self._send_video_file(event, vid)
+                else:
                     await self._send_video_info(event, vid)
 
-    _WATCH_KEYWORDS = frozenset({
-        "看看", "想看", "我要看", "我想看", "看这个", "看看这个",
-        "看视频", "播放", "下载", "发视频", "发来",
-        "watch", "play", "download", "video",
-    })
+    _WATCH_KEYWORDS = frozenset(
+        {
+            "看看",
+            "想看",
+            "我要看",
+            "我想看",
+            "看这个",
+            "看看这个",
+            "看视频",
+            "播放",
+            "下载",
+            "发视频",
+            "发来",
+            "watch",
+            "play",
+            "download",
+            "video",
+        }
+    )
 
     def _is_watch_intent(self, text: str) -> bool:
-        cleaned = _BILI_LINK_REGEX.sub('', text)
+        cleaned = _BILI_LINK_REGEX.sub("", text)
         text_lower = cleaned.lower()
         return any(kw in text_lower for kw in self._WATCH_KEYWORDS)
 
@@ -637,7 +735,9 @@ class Main(BaseModule):
 
             if result == "TOO_LARGE":
                 size_mb = self.config.get("max_file_size", 104857600) / 1024 / 1024
-                await event.reply(f"该视频文件过大（超过 {size_mb:.0f}MB），无法下载发送")
+                await event.reply(
+                    f"该视频文件过大（超过 {size_mb:.0f}MB），无法下载发送"
+                )
                 return
 
             if not result:
@@ -655,7 +755,9 @@ class Main(BaseModule):
                     await event.reply(result, method="File")
                     sent = True
                 except Exception as e:
-                    self.logger.error(f"发送视频文件失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                    self.logger.error(
+                        f"发送视频文件失败 (尝试 {attempt + 1}/{max_retries}): {e}"
+                    )
             finally:
                 try:
                     os.unlink(result)
@@ -696,7 +798,9 @@ class Main(BaseModule):
         except Exception:
             return ("Text", templates["text"])
 
-    async def _send_video_info(self, event, video_id: str):
+    async def _send_video_info(
+        self, event, video_id: str, skip_download_hint: bool = False
+    ):
         info = await self.parser.parse_video(video_id)
         if not info:
             return
@@ -706,12 +810,12 @@ class Main(BaseModule):
         comment_count = self.config.get("comment_count", 3)
 
         if show_comments and info.get("aid"):
-            comments = await self.parser.get_hot_comments(
-                info["aid"], comment_count
-            )
+            comments = await self.parser.get_hot_comments(info["aid"], comment_count)
 
         comments_html = BiliTemplates.build_comments_html(comments) if comments else ""
-        comments_md = BiliTemplates.build_comments_markdown(comments) if comments else ""
+        comments_md = (
+            BiliTemplates.build_comments_markdown(comments) if comments else ""
+        )
         comments_text = BiliTemplates.build_comments_text(comments) if comments else ""
 
         templates_set = {
@@ -729,7 +833,7 @@ class Main(BaseModule):
             except Exception as e:
                 self.logger.debug(f"发送封面图失败: {e}")
 
-        if self.config.get("enable_download", True):
+        if not skip_download_hint and self.config.get("enable_download", True):
             download_hint = "\n\n想看这个视频吗？回复：`我要看这个`"
             content += download_hint
 
@@ -738,7 +842,8 @@ class Main(BaseModule):
         except Exception:
             await event.reply(templates_set["text"])
 
-        if self.config.get("enable_download", True):
+        if not skip_download_hint and self.config.get("enable_download", True):
+
             async def on_download_reply(reply_event):
                 await self._handle_download_reply(reply_event, video_id)
 
